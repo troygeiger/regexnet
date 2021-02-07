@@ -6,10 +6,12 @@ then
     exit 1
 fi
 
+AppName="regexnet"
 BuildVersion=$(echo $1 | cut -d 'v' -f 2)
-OutPathBase=$(dirname "$(readlink -f $0)")/bin/LinuxPackages
-OutPath="$OutPathBase/regexnet-$BuildVersion-amd64"
-OutPathArm64="$OutPathBase/regexnet-$BuildVersion-arm64"
+Bin=$(dirname "$(readlink -f $0)")/bin
+OutPathBase=$Bin/LinuxPackages
+OutPath="$OutPathBase/$AppName-$BuildVersion-amd64"
+OutPathArm64="$OutPathBase/$AppName-$BuildVersion-arm64"
 
 if [ ! -d $OutPath/DEBIAN ]
 then
@@ -21,25 +23,29 @@ then
 fi
 
 cat > $OutPath/DEBIAN/control << EOF
-Package: regexnet
+Package: ${AppName}
 Version: ${BuildVersion}
 Section: custom
 Architecture: amd64
-Maintainer: https://github.com/troygeiger/regexy
+Maintainer: https://github.com/troygeiger/${AppName}
 Description: Provides regular expression processing to the command line.
 EOF
 
 cat > $OutPathArm64/DEBIAN/control << EOF
-Package: regexnet
+Package: ${AppName}
 Version: ${BuildVersion}
 Section: custom
 Architecture: arm64
-Maintainer: https://github.com/troygeiger/regexy
+Maintainer: https://github.com/troygeiger/${AppName}
 Description: Provides regular expression processing to the command line.
 EOF
 
 
 dotnet publish -c Release -r linux-x64 -o $OutPath/usr/bin -p:Version=$BuildVersion
 dotnet publish -c Release -r linux-arm64 -o $OutPathArm64/usr/bin -p:Version=$BuildVersion
+dotnet publish -c Release -r win-x64 -o $Bin/publish -p:IncludeNativeLibrariesForSelfExtract=true
 dpkg-deb --build $OutPath
 dpkg-deb --build $OutPathArm64
+zip -j "$Bin/linux-x64.zip" "$OutPath/usr/bin/$AppName"
+zip -j "$Bin/linux-arm64.zip" "$OutPathArm64/usr/bin/$AppName"
+zip -j "$Bin/windows-x64.zip" "$Bin/publish/$AppName.exe"
