@@ -26,6 +26,7 @@ jobs:
       with:
         files: |
           bin/**/*.deb
+          bin/*.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
