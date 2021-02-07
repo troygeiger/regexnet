@@ -10,36 +10,36 @@ namespace regexy
     {
         static void Main(string[] args)
         {
-            Parsed<ClOptions> cl = Parser.Default.ParseArguments<ClOptions>(args) as Parsed<ClOptions>;
-            if (cl == null) return;
+            Parsed<ClOptions> parsed = Parser.Default.ParseArguments<ClOptions>(args) as Parsed<ClOptions>;
+            if (parsed == null) return;
+            ClOptions cl = parsed.Value;
             if (Console.IsInputRedirected)
             {
-                cl.Value.Input = Console.In.ReadToEnd();
+                cl.Input = Console.In.ReadToEnd();
             }
-            Regex regex = new Regex(cl.Value.Expression, BuildRegexOptions(cl.Value));
-            var match = regex.Match(cl.Value.Input);
-            if (!match.Success) return;
-            if (cl.Value.ReturnGroups.Count() == 0)
+
+            Regex regex = new Regex(cl.Expression, BuildRegexOptions(cl));
+            var match = regex.Match(cl.Input);
+            while (match.Success)
             {
-                Console.Write(match.Value);
-                return;
-            }
-            if (cl.Value.ReturnAsSingleLine)
-            {
-                foreach (int g in cl.Value.ReturnGroups)
+                if (cl.ReturnGroups.Count() == 0)
                 {
-                    Console.Write(match.Groups[g].Value);
+                    WriteOutput(match.Value, cl.MultiLine);
                 }
-            }
-            else
-            {
-                foreach (int g in cl.Value.ReturnGroups)
+                else
                 {
-                    Console.WriteLine(match.Groups[g].Value);
+                    foreach (int g in cl.ReturnGroups)
+                    {
+                        WriteOutput(match.Groups[g].Value, cl.MultiLine);
+                    }
                 }
+                if (!cl.MatchAll) break;
+                match = match.NextMatch();
             }
-            if (!cl.Value.NoEndLineBreak)
-                Console.WriteLine(); 
+            if (!cl.NoEndLineBreak)
+            {
+                Console.WriteLine();
+            }
         }
 
         static RegexOptions BuildRegexOptions(ClOptions args)
@@ -48,6 +48,18 @@ namespace regexy
             options |= args.IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None;
             options |= args.MultiLine ? RegexOptions.Multiline : RegexOptions.Singleline;
             return options;
+        }
+
+        static void WriteOutput(string value, bool writeLine)
+        {
+            if (writeLine)
+            {
+                Console.WriteLine(value);
+            }
+            else
+            {
+                Console.Write(value);
+            }
         }
     }
 
@@ -59,11 +71,14 @@ namespace regexy
         [Option('e', "expresion", HelpText = "The regular expression query.", Required = true)]
         public string Expression { get; set; }
 
+        [Option('a', "match-all", HelpText = "If set, matching will continue until no more matches are found.")]
+        public bool MatchAll { get; set; }
+
         [Option('g', Separator = ',', HelpText = "Specify the group to return in a comma separated list. Ex. -g 1,2", SetName = "group")]
         public IEnumerable<int> ReturnGroups { get; set; }
 
-        [Option('l', "group-inline", HelpText = "Return group results as single line.", SetName = "group")]
-        public bool ReturnAsSingleLine { get; set; }
+        [Option("ml", HelpText = "Return group results as multi-line; otherwise single-lines are returned.", SetName = "group")]
+        public bool OutputMultiLine { get; set; }
 
         [Option('i', "ignore", HelpText = "Ignore string case.")]
         public bool IgnoreCase { get; set; }
